@@ -47,7 +47,7 @@ EMBEDDED_BASE_DATA = {
             "commentary": "Consolidating below intermediate moving averages while providing steady dividend support."
         },
         "AC": {
-            "name": "Ayala Corporation (GCash Conglomerate Proxy)",
+            "name": "Ayala Corporation",
             "price": 529.00,
             "support": 520.00,
             "resistance": 590.00,
