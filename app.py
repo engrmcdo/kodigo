@@ -202,6 +202,12 @@ def fetch_dynamic_market_analytics():
         auto_adjust=True,
         progress=False
     )
+
+manual_price = st.sidebar.number_input(
+    f"Override Price for {selected_ticker} (₱)",
+    value=float(s['price']),
+    step=0.05
+)
     
     for ticker, meta in WATCHLIST.items():
         sym = meta["yf_sym"]
