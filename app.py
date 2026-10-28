@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 st.set_page_config(
-    page_title="PSE Stock Analyst & Insight Engine",
+    page_title="KODIGO NI MCDO",
     page_icon="📈",
     layout="wide"
 )
@@ -15,7 +15,7 @@ EMBEDDED_BASE_DATA = {
     "last_updated": "Embedded Baseline Feed",
     "stocks": {
         "GCASH": {
-            "name": "Mynt, Inc. (GCash - Standalone Fintech)",
+            "name": "Mynt, Inc.",
             "price": 6.69,
             "support": 5.95,
             "resistance": 6.76,
@@ -31,14 +31,14 @@ EMBEDDED_BASE_DATA = {
             "commentary": "Testing upper debut resistance band at ₱6.76 following steady price discovery above its ₱5.95 structural floor."
         },
         "GLO": {
-            "name": "Globe Telecom (GCash Direct Parent)",
+            "name": "Globe Telecom",
             "price": 1544.00,
             "support": 1450.00,
             "resistance": 1650.00,
             "rsi": 46.8,
             "pb": "1.8x",
             "trend": "Below MA20",
-            "sector": "Telecommunications / Fintech",
+            "sector": "Telecommunications",
             "status": "NEUTRAL",
             "buy_band": "₱1,442.75 – ₱1,464.50",
             "sell_band": "₱1,633.50 – ₱1,658.25",
@@ -63,7 +63,7 @@ EMBEDDED_BASE_DATA = {
             "commentary": "Trading in an accumulation band near ₱520.00 structural floor with balanced momentum."
         },
         "BPI": {
-            "name": "Bank of the Philippine Islands (GCash Banking Rail)",
+            "name": "Bank of the Philippine Islands",
             "price": 95.95,
             "support": 92.00,
             "resistance": 110.00,
