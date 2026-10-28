@@ -10,7 +10,7 @@ import pytz
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 st.set_page_config(
-    page_title="PSE Stock Analyst & Insight Engine",
+    page_title="KODIGO NI MCDO",
     page_icon="📈",
     layout="wide"
 )
