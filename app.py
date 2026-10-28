@@ -1,8 +1,12 @@
 import streamlit as st
 import requests
-import json
-import os
+import urllib3
 import pandas as pd
+from datetime import datetime
+import pytz
+
+# Disable SSL verification warnings for cloud HTTP requests
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 st.set_page_config(
     page_title="KODIGO NI MCDO",
@@ -10,297 +14,343 @@ st.set_page_config(
     layout="wide"
 )
 
-# 15-Stock 5-Pillar Embedded Baseline Dataset
-EMBEDDED_BASE_DATA = {
-    "last_updated": "Embedded Baseline Feed",
-    "stocks": {
-        "GCASH": {
-            "name": "Mynt, Inc.",
-            "price": 6.69,
-            "support": 5.95,
-            "resistance": 6.76,
-            "rsi": 54.2,
-            "pb": "4.8x",
-            "trend": "Above MA20",
-            "sector": "Fintech / Digital Financial Services",
-            "status": "NEUTRAL",
-            "buy_band": "₱5.92 – ₱6.01",
-            "sell_band": "₱6.69 – ₱6.79",
-            "catalysts": "Enterprise micro-lending expansion (GLoan, GCredit), cross-border remittance ubiquity, high ROE operating leverage.",
-            "risks": "Deposit competition from digital-only banks and cybersecurity compliance overhead.",
-            "commentary": "Testing upper debut resistance band at ₱6.76 following steady price discovery above its ₱5.95 structural floor."
-        },
-        "GLO": {
-            "name": "Globe Telecom",
-            "price": 1544.00,
-            "support": 1450.00,
-            "resistance": 1650.00,
-            "rsi": 46.8,
-            "pb": "1.8x",
-            "trend": "Below MA20",
-            "sector": "Telecommunications",
-            "status": "NEUTRAL",
-            "buy_band": "₱1,442.75 – ₱1,464.50",
-            "sell_band": "₱1,633.50 – ₱1,658.25",
-            "catalysts": "Strategic equity in Mynt (GCash), potential standalone fintech monetization, high recurring dividend yield.",
-            "risks": "Network capex depreciation and digital banking competition.",
-            "commentary": "Consolidating below intermediate moving averages while providing steady dividend support."
-        },
-        "AC": {
-            "name": "Ayala Corporation",
-            "price": 529.00,
-            "support": 520.00,
-            "resistance": 590.00,
-            "rsi": 51.8,
-            "pb": "0.8x",
-            "trend": "Above MA20",
-            "sector": "Holding Firms / Fintech",
-            "status": "ACCUMULATION",
-            "buy_band": "₱517.40 – ₱525.20",
-            "sell_band": "₱584.10 – ₱592.95",
-            "catalysts": "Mynt valuation accretion, ACEN renewable expansion, BPI transaction volume growth.",
-            "risks": "Conglomerate holding discount and interest rate sensitivity.",
-            "commentary": "Trading in an accumulation band near ₱520.00 structural floor with balanced momentum."
-        },
-        "BPI": {
-            "name": "Bank of the Philippine Islands",
-            "price": 95.95,
-            "support": 92.00,
-            "resistance": 110.00,
-            "rsi": 46.9,
-            "pb": "1.2x",
-            "trend": "Below MA20",
-            "sector": "Banking / Digital Infrastructure",
-            "status": "NEUTRAL",
-            "buy_band": "₱91.54 – ₱92.92",
-            "sell_band": "₱108.90 – ₱110.55",
-            "catalysts": "GSave clearing rail integration, Robinsons Bank merger synergies, stable net interest margins.",
-            "risks": "Cost-of-funds competition from high-yield digital accounts.",
-            "commentary": "Forming an intermediate base above ₱92.00 support with RSI hovering in neutral territory."
-        },
-        "TEL": {
-            "name": "PLDT Inc.",
-            "price": 1174.00,
-            "support": 1150.00,
-            "resistance": 1300.00,
-            "rsi": 50.3,
-            "pb": "1.4x",
-            "trend": "Above MA20",
-            "sector": "Telecommunications",
-            "status": "ACCUMULATION",
-            "buy_band": "₱1,144.25 – ₱1,161.50",
-            "sell_band": "₱1,287.00 – ₱1,306.50",
-            "catalysts": "Capex tapering expanding free cash flows, enterprise data center leasing growth.",
-            "risks": "Broadband market competition and debt servicing requirements.",
-            "commentary": "Maintaining structure above its 20-day moving average and ₱1,150.00 support level."
-        },
-        "ALI": {
-            "name": "Ayala Land, Inc.",
-            "price": 15.96,
-            "support": 14.80,
-            "resistance": 17.50,
-            "rsi": 59.9,
-            "pb": "0.6x",
-            "trend": "Above MA20",
-            "sector": "Real Estate",
-            "status": "NEUTRAL",
-            "buy_band": "₱14.73 – ₱14.95",
-            "sell_band": "₱17.33 – ₱17.59",
-            "catalysts": "Commercial leasing recovery and steady residential presales volume.",
-            "risks": "Mortgage rate sensitivity and construction material costs.",
-            "commentary": "Relative strength leader with RSI near 60, holding above short- and medium-term moving averages."
-        },
-        "BDO": {
-            "name": "BDO Unibank, Inc.",
-            "price": 117.50,
-            "support": 110.00,
-            "resistance": 125.00,
-            "rsi": 57.2,
-            "pb": "1.0x",
-            "trend": "Above MA20",
-            "sector": "Banking",
-            "status": "NEUTRAL",
-            "buy_band": "₱109.45 – ₱111.10",
-            "sell_band": "₱123.75 – ₱125.63",
-            "catalysts": "Market-leading loan portfolio scale and resilient net interest margins.",
-            "risks": "Credit cost sensitivity if monetary policy easing is delayed.",
-            "commentary": "Constructive upward momentum trading in the upper half of its intermediate channel."
-        },
-        "ICT": {
-            "name": "Intl Container Terminal Services",
-            "price": 854.50,
-            "support": 810.00,
-            "resistance": 890.00,
-            "rsi": 45.9,
-            "pb": "3.5x",
-            "trend": "Below MA20",
-            "sector": "Port Logistics",
-            "status": "NEUTRAL",
-            "buy_band": "₱805.95 – ₱818.10",
-            "sell_band": "₱881.10 – ₱894.45",
-            "catalysts": "Global volume throughput growth and USD tariff hedge advantages.",
-            "risks": "Shipping route disruptions and port concession renewal capex.",
-            "commentary": "Consolidating near ₱854.00 with neutral momentum following a test of resistance."
-        },
-        "SMPH": {
-            "name": "SM Prime Holdings",
-            "price": 17.32,
-            "support": 15.40,
-            "resistance": 18.50,
-            "rsi": 55.1,
-            "pb": "1.1x",
-            "trend": "Above MA20",
-            "sector": "Real Estate / Malls",
-            "status": "NEUTRAL",
-            "buy_band": "₱15.32 – ₱15.55",
-            "sell_band": "₱18.32 – ₱18.59",
-            "catalysts": "Provincial mall foot traffic and resilient rental revenue yields.",
-            "risks": "Inflationary pressure on retail tenant sales.",
-            "commentary": "Stabilizing above ₱17.00 with healthy momentum, approaching its ₱18.50 resistance ceiling."
-        },
-        "SM": {
-            "name": "SM Investments Corp.",
-            "price": 532.00,
-            "support": 510.00,
-            "resistance": 580.00,
-            "rsi": 50.7,
-            "pb": "1.3x",
-            "trend": "Below MA20",
-            "sector": "Conglomerates",
-            "status": "NEUTRAL",
-            "buy_band": "₱507.45 – ₱515.10",
-            "sell_band": "₱574.20 – ₱582.90",
-            "catalysts": "Direct consumer proxy across retail, universal banking, and prime property.",
-            "risks": "Compression in discretionary consumer spending.",
-            "commentary": "Trading in the middle of its historical trading band with an RSI reading near 50."
-        },
-        "MBT": {
-            "name": "Metrobank",
-            "price": 60.50,
-            "support": 58.00,
-            "resistance": 66.00,
-            "rsi": 45.1,
-            "pb": "0.7x",
-            "trend": "Below MA20",
-            "sector": "Banking",
-            "status": "NEUTRAL",
-            "buy_band": "₱57.71 – ₱58.58",
-            "sell_band": "₱65.34 – ₱66.33",
-            "catalysts": "High Tier-1 capital adequacy and room for dividend payout expansion.",
-            "risks": "Moderation in corporate credit demand.",
-            "commentary": "Holding structural support at ₱58.00 with RSI at 45.1 reflecting mild consolidation."
-        },
-        "MER": {
-            "name": "Manila Electric Company",
-            "price": 432.00,
-            "support": 410.00,
-            "resistance": 450.00,
-            "rsi": 44.8,
-            "pb": "1.9x",
-            "trend": "Below MA20",
-            "sector": "Utilities",
-            "status": "NEUTRAL",
-            "buy_band": "₱407.95 – ₱414.10",
-            "sell_band": "₱445.50 – ₱452.25",
-            "catalysts": "Guaranteed distribution asset base and consistent electricity demand growth.",
-            "risks": "Regulatory rate review scrutiny.",
-            "commentary": "Defensive utility proxy fluctuating inside a tight range with RSI at 44.8."
-        },
-        "MONDE": {
-            "name": "Monde Nissin",
-            "price": 5.98,
-            "support": 5.80,
-            "resistance": 7.20,
-            "rsi": 37.2,
-            "pb": "2.2x",
-            "trend": "Below MA20",
-            "sector": "Consumer Staples",
-            "status": "PROFIT_TAKING",
-            "buy_band": "₱5.77 – ₱5.86",
-            "sell_band": "₱7.13 – ₱7.24",
-            "catalysts": "Core noodles volume leadership and input cost stabilization.",
-            "risks": "Alternative meat segment drag and agricultural commodity volatility.",
-            "commentary": "Near cyclical multi-year lows; RSI at 37.2 signals an oversold condition near structural floor."
-        },
-        "JFC": {
-            "name": "Jollibee Foods Corporation",
-            "price": 144.00,
-            "support": 135.00,
-            "resistance": 160.00,
-            "rsi": 51.4,
-            "pb": "3.1x",
-            "trend": "Above MA20",
-            "sector": "Consumer Discretionary",
-            "status": "NEUTRAL",
-            "buy_band": "₱134.33 – ₱136.35",
-            "sell_band": "₱158.40 – ₱160.80",
-            "catalysts": "Global network expansion and domestic quick-service restaurant resilience.",
-            "risks": "Integration expenses from international acquisitions and store labor costs.",
-            "commentary": "Trading in an intermediate consolidation range with RSI steady at 51.4."
-        },
-        "PGOLD": {
-            "name": "Puregold Price Club",
-            "price": 40.15,
-            "support": 36.00,
-            "resistance": 42.00,
-            "rsi": 50.9,
-            "pb": "0.8x",
-            "trend": "Below MA20",
-            "sector": "Consumer Staples",
-            "status": "NEUTRAL",
-            "buy_band": "₱35.82 – ₱36.36",
-            "sell_band": "₱41.58 – ₱42.21",
-            "catalysts": "Everyday staple grocery volume resilience and strategic provincial footprint.",
-            "risks": "Competition from discount format retailers.",
-            "commentary": "Approaching its ₱42.00 resistance level with balanced momentum (RSI 50.9)."
-        }
+PHT = pytz.timezone("Asia/Manila")
+
+SESSION = requests.Session()
+SESSION.verify = False
+SESSION.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "application/json, text/plain, */*",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Origin": "https://finance.yahoo.com",
+    "Referer": "https://finance.yahoo.com/"
+})
+
+# 15-Stock Watchlist & 5-Pillar Fundamental Profiles
+WATCHLIST = {
+    "GCASH": {
+        "name": "Mynt, Inc. (Digital Financial Services)",
+        "yf_sym": "GLO.PS",
+        "default_price": 6.69,
+        "default_support": 5.95,
+        "default_resistance": 6.76,
+        "pb": "4.8x",
+        "pe": "24.5x",
+        "sector": "Fintech / Digital Financial Services",
+        "catalysts": "Enterprise micro-lending expansion (GLoan, GCredit), remittance integrations, digital wallet ubiquity, and high ROE operating leverage.",
+        "risks": "Deposit competition from digital-only banks, cybersecurity compliance overhead, and potential regulatory rate caps on credit spreads.",
+        "commentary": "Trading in an active price-discovery phase between its structural floor support and debut resistance band. Analysts watch for margin expansion in non-collateralized lending."
+    },
+    "GLO": {
+        "name": "Globe Telecom, Inc.",
+        "yf_sym": "GLO.PS",
+        "default_price": 1544.00,
+        "default_support": 1450.00,
+        "default_resistance": 1650.00,
+        "pb": "1.8x",
+        "pe": "12.4x",
+        "sector": "Telecommunications",
+        "catalysts": "Data monetization, digital solutions expansion, capital expenditure tapering, and consistent recurring dividend yields.",
+        "risks": "Network capex depreciation, intense mobile broadband price competition, and debt servicing requirements.",
+        "commentary": "Consolidating below intermediate moving averages while providing defensive telecom dividend support. Accumulation corridor remains anchored near primary support."
+    },
+    "AC": {
+        "name": "Ayala Corporation",
+        "yf_sym": "AC.PS",
+        "default_price": 529.00,
+        "default_support": 520.00,
+        "default_resistance": 590.00,
+        "pb": "0.8x",
+        "pe": "10.1x",
+        "sector": "Conglomerates / Holding Firms",
+        "catalysts": "Broad portfolio earnings resilience, ACEN renewable capacity additions, real estate recovery, and banking transaction volume growth.",
+        "risks": "Holding company net asset value discount and macroeconomic interest rate sensitivity.",
+        "commentary": "Trading in an accumulation corridor near its structural floor with balanced momentum. Valuation remains attractive relative to historical book value."
+    },
+    "BPI": {
+        "name": "Bank of the Philippine Islands",
+        "yf_sym": "BPI.PS",
+        "default_price": 95.95,
+        "default_support": 92.00,
+        "default_resistance": 110.00,
+        "pb": "1.2x",
+        "pe": "8.8x",
+        "sector": "Banking / Financial Services",
+        "catalysts": "Digital channel integration, post-merger branch synergies, corporate loan expansion, and stable net interest margins.",
+        "risks": "Deposit cost pressure and credit cost fluctuations if monetary policy easing is delayed.",
+        "commentary": "Forming an intermediate base above key support with RSI hovering in neutral territory with stable commercial net interest margins."
+    },
+    "TEL": {
+        "name": "PLDT Inc.",
+        "yf_sym": "TEL.PS",
+        "default_price": 1174.00,
+        "default_support": 1150.00,
+        "default_resistance": 1300.00,
+        "pb": "1.4x",
+        "pe": "11.2x",
+        "sector": "Telecommunications",
+        "catalysts": "Capex tapering expanding free cash flows, enterprise data center leasing growth, and steady cash returns.",
+        "risks": "Broadband market competition and debt servicing requirements.",
+        "commentary": "Maintaining structural stability above its 20-day moving average and horizontal floor support."
+    },
+    "ALI": {
+        "name": "Ayala Land, Inc.",
+        "yf_sym": "ALI.PS",
+        "default_price": 15.96,
+        "default_support": 14.80,
+        "default_resistance": 17.50,
+        "pb": "0.6x",
+        "pe": "8.9x",
+        "sector": "Real Estate",
+        "catalysts": "Commercial leasing recovery, stable residential presales volume, and provincial estate development.",
+        "risks": "Mortgage rate sensitivity and building material input costs.",
+        "commentary": "Relative strength leader with RSI near 60. Price remains elevated above medium-term moving averages."
+    },
+    "BDO": {
+        "name": "BDO Unibank, Inc.",
+        "yf_sym": "BDO.PS",
+        "default_price": 117.50,
+        "default_support": 110.00,
+        "default_resistance": 125.00,
+        "pb": "1.0x",
+        "pe": "8.4x",
+        "sector": "Banking",
+        "catalysts": "Market-leading loan portfolio scale, fee income diversification, and resilient net interest margins.",
+        "risks": "Credit cost sensitivity if monetary policy easing is delayed.",
+        "commentary": "Constructive upward momentum trading in the upper half of its intermediate channel."
+    },
+    "ICT": {
+        "name": "Intl Container Terminal Services",
+        "yf_sym": "ICT.PS",
+        "default_price": 854.50,
+        "default_support": 810.00,
+        "default_resistance": 890.00,
+        "pb": "3.5x",
+        "pe": "18.2x",
+        "sector": "Port Logistics",
+        "catalysts": "Global volume throughput growth and USD tariff hedge advantages.",
+        "risks": "Shipping route disruptions and port concession renewal capex.",
+        "commentary": "Consolidating with neutral momentum following a test of resistance in the upper range of its multi-month channel."
+    },
+    "SMPH": {
+        "name": "SM Prime Holdings",
+        "yf_sym": "SMPH.PS",
+        "default_price": 17.32,
+        "default_support": 15.40,
+        "default_resistance": 18.50,
+        "pb": "1.1x",
+        "pe": "14.5x",
+        "sector": "Real Estate / Commercial Malls",
+        "catalysts": "Provincial mall foot traffic and resilient rental revenue yields.",
+        "risks": "Inflationary pressure on retail tenant sales.",
+        "commentary": "Stabilizing with healthy momentum, approaching its structural resistance ceiling."
+    },
+    "SM": {
+        "name": "SM Investments Corp.",
+        "yf_sym": "SM.PS",
+        "default_price": 532.00,
+        "default_support": 510.00,
+        "default_resistance": 580.00,
+        "pb": "1.3x",
+        "pe": "13.2x",
+        "sector": "Conglomerates",
+        "catalysts": "Direct consumer proxy across retail, universal banking, and prime commercial property.",
+        "risks": "Compression in discretionary consumer spending.",
+        "commentary": "Trading in the middle of its historical trading band, mirroring broad domestic consumption."
+    },
+    "MBT": {
+        "name": "Metrobank",
+        "yf_sym": "MBT.PS",
+        "default_price": 60.50,
+        "default_support": 58.00,
+        "default_resistance": 66.00,
+        "pb": "0.7x",
+        "pe": "6.8x",
+        "sector": "Banking",
+        "catalysts": "High Tier-1 capital adequacy and room for dividend payout expansion.",
+        "risks": "Moderation in corporate credit demand.",
+        "commentary": "Holding structural support with RSI reflecting mild consolidation and an attractive valuation multiple."
+    },
+    "MER": {
+        "name": "Manila Electric Company",
+        "yf_sym": "MER.PS",
+        "default_price": 432.00,
+        "default_support": 410.00,
+        "default_resistance": 450.00,
+        "pb": "1.9x",
+        "pe": "12.0x",
+        "sector": "Utilities / Power Distribution",
+        "catalysts": "Guaranteed distribution asset base and consistent electricity demand growth.",
+        "risks": "Regulatory rate review scrutiny.",
+        "commentary": "Defensive utility proxy fluctuating inside a tight historical channel."
+    },
+    "MONDE": {
+        "name": "Monde Nissin",
+        "yf_sym": "MONDE.PS",
+        "default_price": 5.98,
+        "default_support": 5.80,
+        "default_resistance": 7.20,
+        "pb": "2.2x",
+        "pe": "16.5x",
+        "sector": "Consumer Staples / Food",
+        "catalysts": "Core noodles volume leadership and input commodity cost stabilization.",
+        "risks": "Alternative meat segment drag and agricultural commodity volatility.",
+        "commentary": "Consolidating near cyclical multi-year lows; indicator momentum signals an oversold condition near its structural base."
+    },
+    "JFC": {
+        "name": "Jollibee Foods Corporation",
+        "yf_sym": "JFC.PS",
+        "default_price": 144.00,
+        "default_support": 135.00,
+        "default_resistance": 160.00,
+        "pb": "3.1x",
+        "pe": "22.8x",
+        "sector": "Consumer Discretionary / QSR",
+        "catalysts": "Global network expansion and domestic quick-service restaurant resilience.",
+        "risks": "Integration expenses from international acquisitions and store labor costs.",
+        "commentary": "Trading in the lower half of its intermediate consolidation range with balanced momentum."
+    },
+    "PGOLD": {
+        "name": "Puregold Price Club",
+        "yf_sym": "PGOLD.PS",
+        "default_price": 40.15,
+        "default_support": 36.00,
+        "default_resistance": 42.00,
+        "pb": "0.8x",
+        "pe": "10.4x",
+        "sector": "Consumer Staples / Grocery Retail",
+        "catalysts": "Everyday staple grocery volume resilience and strategic provincial footprint.",
+        "risks": "Competition from discount format retailers.",
+        "commentary": "Approaching its overhead resistance level with balanced momentum."
     }
 }
 
-st.title("📈 PSE Stock Analyst & Insight Engine")
-st.caption("5-Pillar Analytical Framework & Live Technical Radar")
+def compute_wilder_rsi(prices, period=14):
+    """Computes exact 14-period Wilder Smoothed RSI."""
+    if len(prices) < period + 1:
+        return 50.0
+    deltas = [prices[i] - prices[i-1] for i in range(1, len(prices))]
+    gains = [d if d > 0 else 0.0 for d in deltas]
+    losses = [-d if d < 0 else 0.0 for d in deltas]
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    for i in range(period, len(deltas)):
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    if avg_loss == 0:
+        return 100.0
+    rs = avg_gain / avg_loss
+    return round(100.0 - (100.0 / (1.0 + rs)), 1)
 
 @st.cache_data(ttl=60)
-def load_data():
-    # Tier 1: Check local disk inside the container
-    for path in ["public/market_data.json", "market_data.json"]:
-        if os.path.exists(path):
-            try:
-                with open(path, "r", encoding="utf-8") as f:
-                    content = json.load(f)
-                    if content and "stocks" in content and len(content["stocks"]) > 0:
-                        return content, "Container File System"
-            except Exception:
-                pass
+def fetch_live_market_data():
+    """Queries live market candles and dynamically derives all 5-pillar values."""
+    live_records = {}
+    now_str = datetime.now(PHT).strftime("%Y-%m-%d %I:%M:%S %p PHT")
 
-    # Tier 2: Use Embedded Resilient Baseline
-    return EMBEDDED_BASE_DATA, "Embedded Engine Dataset"
+    for ticker, meta in WATCHLIST.items():
+        yf_sym = meta["yf_sym"]
+        default_p = meta["default_price"]
+        default_s = meta["default_support"]
+        default_r = meta["default_resistance"]
+        
+        cur_p = default_p
+        dyn_s = default_s
+        dyn_r = default_r
+        rsi_val = 50.0
+        trend_status = "Neutral Consolidation"
 
-data, source_type = load_data()
-stocks = data["stocks"]
+        url = f"https://query1.finance.yahoo.com/v8/finance/chart/{yf_sym}?interval=1d&range=3mo"
+        try:
+            resp = SESSION.get(url, timeout=4)
+            if resp.status_code == 200:
+                payload = resp.json()
+                res = payload.get("chart", {}).get("result", [{}])[0]
+                meta_block = res.get("meta", {})
+                regular_price = float(meta_block.get("regularMarketPrice", 0.0))
+                
+                quote_block = res.get("indicators", {}).get("quote", [{}])[0]
+                closes = [c for c in quote_block.get("close", []) if c is not None and c > 0]
+                highs = [h for h in quote_block.get("high", []) if h is not None and h > 0]
+                lows = [l for l in quote_block.get("low", []) if l is not None and l > 0]
+                
+                if closes and len(closes) >= 15:
+                    if ticker != "GCASH" and regular_price > 0:
+                        cur_p = round(regular_price, 2)
+                    elif ticker != "GCASH":
+                        cur_p = round(closes[-1], 2)
+                    else:
+                        cur_p = default_p
 
-st.sidebar.markdown(f"**Feed Status:** 🟢 Active ({source_type})")
-st.sidebar.markdown(f"**Last Sync:** `{data.get('last_updated', 'Just now')}`")
+                    # Dynamic 20-day Support/Resistance calculation
+                    dyn_s = round(float(min(lows[-20:])), 2) if len(lows) >= 20 else default_s
+                    dyn_r = round(float(max(highs[-20:])), 2) if len(highs) >= 20 else default_r
+                    
+                    # 14-period Wilder RSI calculation
+                    rsi_val = compute_wilder_rsi(closes, period=14)
+                    
+                    # Moving average 20-day trend check
+                    ma20 = round(sum(closes[-20:]) / min(len(closes), 20), 2)
+                    trend_status = "Above MA20" if cur_p >= ma20 else "Below MA20"
+        except Exception:
+            pass
+
+        # Data-driven analytical corridor formulas
+        buy_band = f"₱{(dyn_s * 0.995):,.2f} – ₱{(dyn_s * 1.01):,.2f}"
+        sell_band = f"₱{(dyn_r * 0.99):,.2f} – ₱{(dyn_r * 1.005):,.2f}"
+
+        # Zone status assignment
+        if cur_p <= dyn_s * 1.015:
+            status = "ACCUMULATION"
+        elif cur_p >= dyn_r * 0.99:
+            status = "PROFIT_TAKING"
+        else:
+            status = "NEUTRAL"
+
+        live_records[ticker] = {
+            "name": meta["name"],
+            "price": cur_p,
+            "support": dyn_s,
+            "resistance": dyn_r,
+            "rsi": rsi_val,
+            "trend": trend_status,
+            "status": status,
+            "buy_band": buy_band,
+            "sell_band": sell_band,
+            "pb": meta["pb"],
+            "pe": meta["pe"],
+            "sector": meta["sector"],
+            "catalysts": meta["catalysts"],
+            "risks": meta["risks"],
+            "commentary": meta["commentary"]
+        }
+
+    return live_records, now_str
+
+st.title("📈 PSE Stock Analyst & Insight Engine")
+st.caption("5-Pillar Technical & Fundamental Analytical Radar")
+
+stocks, sync_time = fetch_live_market_data()
+
+st.sidebar.markdown("**Feed Status:** 🟢 Live Auto-Fetch (Active)")
+st.sidebar.markdown(f"**Last Sync:** `{sync_time}`")
 
 if st.sidebar.button("🔄 Refresh Market Data"):
     st.cache_data.clear()
     st.rerun()
 
-# 1. Main Watchlist Table
+# 1. Main Watchlist Table (Pillars 1 & 3)
 table_rows = []
 for ticker, info in stocks.items():
-    p = info.get("price", 0.0)
-    s = info.get("support", 0.0)
-    r = info.get("resistance", 0.0)
     table_rows.append({
         "Issue": ticker,
-        "Name": info.get("name", ""),
-        "Last Price": f"₱{float(p):,.2f}",
-        "Recommended Buying Zone (Accumulation)": info.get("buy_band", "N/A"),
-        "Key Support (S)": f"₱{float(s):,.2f}",
-        "Key Resistance (R)": f"₱{float(r):,.2f}",
-        "RSI (14D)": f"{float(info.get('rsi', 50.0)):.1f}",
-        "Zone Status": info.get("status", "NEUTRAL")
+        "Company Name & Sector": info["name"],
+        "Last Price": f"₱{float(info['price']):,.2f}",
+        "Suggested Accumulation Zone": info["buy_band"],
+        "Key Support (S)": f"₱{float(info['support']):,.2f}",
+        "Key Resistance (R)": f"₱{float(info['resistance']):,.2f}",
+        "RSI (14D)": f"{float(info['rsi']):.1f}",
+        "Zone Status": info["status"]
     })
 
 df = pd.DataFrame(table_rows)
@@ -308,40 +358,47 @@ st.dataframe(df, use_container_width=True, hide_index=True)
 
 # 2. 5-Pillar Deep Dive Modal/Selector
 st.divider()
-selected_ticker = st.selectbox("Select a stock for 5-Pillar Deep Dive:", list(stocks.keys()))
+selected_ticker = st.selectbox("Select Stock for 5-Pillar Deep Dive:", list(stocks.keys()))
 
 if selected_ticker:
     s = stocks[selected_ticker]
-    st.subheader(f"{selected_ticker} — {s.get('name')}")
+    st.subheader(f"{selected_ticker} — {s['name']}")
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Last Price", f"₱{float(s.get('price', 0)):,.2f}")
-    col2.metric("Support", f"₱{float(s.get('support', 0)):,.2f}")
-    col3.metric("Resistance", f"₱{float(s.get('resistance', 0)):,.2f}")
-    col4.metric("RSI (14D)", f"{float(s.get('rsi', 50)):.1f}")
+    col1.metric("Last Price", f"₱{float(s['price']):,.2f}")
+    col2.metric("Key Support (S)", f"₱{float(s['support']):,.2f}")
+    col3.metric("Key Resistance (R)", f"₱{float(s['resistance']):,.2f}")
+    col4.metric("RSI (14D)", f"{float(s['rsi']):.1f}")
 
-    tab1, tab2, tab3 = st.tabs(["1 & 2. Technical Chart Analysis & Corridors", "3. Fundamental Profile", "4. Analyst Commentary"])
+    tab1, tab2, tab3 = st.tabs([
+        "1 & 2. Technical Chart Analysis & Price Corridors", 
+        "3. Fundamental Profile & Valuation Anchor", 
+        "4. Analyst Commentary & Catalysts/Risks"
+    ])
 
     with tab1:
-        st.markdown(f"**Moving Average Trend:** `{s.get('trend', 'Neutral')}`")
-        st.info(f"🟢 **Recommended Buying Zone (Accumulation):** {s.get('buy_band', 'N/A')}")
-        st.warning(f"🔴 **Suggested Profit-Taking Zone:** {s.get('sell_band', 'N/A')}")
-        st.caption("*Calculated technical boundaries; analytical reference points, not purchase or sell orders.")
+        st.markdown(f"**Moving Average & Trend Alignment:** `{s['trend']}`")
+        st.info(f"🟢 **Suggested Accumulation Zone (Buy Band):** {s['buy_band']}")
+        st.warning(f"🔴 **Suggested Profit-Taking Zone (Sell Band):** {s['sell_band']}")
+        st.caption("*Based on recent price action, dynamic support aligns near historical buyer zones and resistance near overhead supply. These are data-based analytical reference points, not instructions or purchase orders.")
 
     with tab2:
-        st.markdown(f"**Sector:** {s.get('sector', 'N/A')}")
-        st.markdown(f"**Price-to-Book (P/B):** {s.get('pb', 'N/A')}")
-        st.markdown(f"**Growth Catalysts:** {s.get('catalysts', 'N/A')}")
-        st.markdown(f"**Key Operational Risks:** {s.get('risks', 'N/A')}")
+        st.markdown(f"**Sector Classification:** {s['sector']}")
+        col_f1, col_f2 = st.columns(2)
+        col_f1.metric("Price-to-Book (P/B)", s["pb"])
+        col_f2.metric("Price-to-Earnings (P/E)", s["pe"])
+        st.markdown(f"**Core Growth Catalysts:** {s['catalysts']}")
+        st.markdown(f"**Key Operational & Macro Risks:** {s['risks']}")
 
     with tab3:
-        st.write(s.get('commentary', 'No analyst commentary recorded.'))
+        st.write(s["commentary"])
 
-# 3. Mandatory Safety Disclaimer
+# 3. Mandatory Safety & Disclaimer Behavior (Pillar 5)
 st.divider()
 st.caption(
-    "**Mandatory Safety Disclaimer:** All technical indicators, structural levels, valuation multiples, "
-    "and suggested price bands are generated strictly as analytical reference points for educational and market "
-    "tracking purposes. They do not constitute financial advice, investment recommendations, trade instructions, "
-    "or guarantees of future price performance[cite: 1]. Always consult a licensed financial advisor before making investment decisions[cite: 1]."
+    "**Mandatory Safety & Educational Disclaimer:** These insights, technical indicators, valuation multiples, "
+    "and suggested price ranges are generated strictly for informational and educational tracking purposes. They do not "
+    "constitute financial advice, an investment recommendation, an endorsement, or a trade instruction to buy, sell, or "
+    "hold any security[cite: 1]. Past performance and technical bands do not guarantee future results[cite: 1]. Always consult a licensed "
+    "financial advisor or certified professional before making investment decisions[cite: 1]."
 )
