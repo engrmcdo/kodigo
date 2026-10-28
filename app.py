@@ -5,13 +5,32 @@ import pandas as pd
 from datetime import datetime
 import pytz
 
-# Disable SSL verification warnings for cloud HTTP requests
+# Suppress SSL verification warnings for cloud HTTP queries
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 st.set_page_config(
     page_title="KODIGO NI MCDO",
     page_icon="📈",
     layout="wide"
+)
+
+# --------------------------------------------------------------------------
+# Auto-Refresh Mechanism (Triggers every 60 seconds without manual refresh)
+# --------------------------------------------------------------------------
+st.markdown(
+    """
+    <script>
+    var timeout = 60; // 60 seconds interval
+    function timer() {
+        timeout--;
+        if (timeout <= 0) {
+            window.parent.location.reload();
+        }
+    }
+    setInterval(timer, 1000);
+    </script>
+    """,
+    unsafe_allow_html=True
 )
 
 PHT = pytz.timezone("Asia/Manila")
@@ -242,6 +261,7 @@ def compute_wilder_rsi(prices, period=14):
     rs = avg_gain / avg_loss
     return round(100.0 - (100.0 / (1.0 + rs)), 1)
 
+# Cache set to 60 seconds for live per-minute market syncing
 @st.cache_data(ttl=60)
 def fetch_live_market_data():
     """Queries live market candles and dynamically derives all 5-pillar values."""
@@ -295,7 +315,7 @@ def fetch_live_market_data():
         except Exception:
             pass
 
-        # Data-driven analytical corridor formulas
+        # Data-driven analytical corridor formulas[cite: 1]
         buy_band = f"₱{(dyn_s * 0.995):,.2f} – ₱{(dyn_s * 1.01):,.2f}"
         sell_band = f"₱{(dyn_r * 0.99):,.2f} – ₱{(dyn_r * 1.005):,.2f}"
 
@@ -334,8 +354,9 @@ stocks, sync_time = fetch_live_market_data()
 
 st.sidebar.markdown("**Feed Status:** 🟢 Live Auto-Fetch (Active)")
 st.sidebar.markdown(f"**Last Sync:** `{sync_time}`")
+st.sidebar.markdown("**Sync Frequency:** ⏱️ Every 60 seconds")
 
-if st.sidebar.button("🔄 Refresh Market Data"):
+if st.sidebar.button("🔄 Refresh Now"):
     st.cache_data.clear()
     st.rerun()
 
@@ -380,7 +401,7 @@ if selected_ticker:
         st.markdown(f"**Moving Average & Trend Alignment:** `{s['trend']}`")
         st.info(f"🟢 **Suggested Accumulation Zone (Buy Band):** {s['buy_band']}")
         st.warning(f"🔴 **Suggested Profit-Taking Zone (Sell Band):** {s['sell_band']}")
-        st.caption("*Based on recent price action, dynamic support aligns near historical buyer zones and resistance near overhead supply. These are data-based analytical reference points, not instructions or purchase orders.")
+        st.caption("*Based on recent price action, dynamic support aligns near historical buyer zones and resistance near overhead supply[cite: 1]. These are data-based analytical reference points, not instructions or purchase orders[cite: 1].")
 
     with tab2:
         st.markdown(f"**Sector Classification:** {s['sector']}")
@@ -397,7 +418,7 @@ if selected_ticker:
 st.divider()
 st.caption(
     "**Mandatory Safety & Educational Disclaimer:** These insights, technical indicators, valuation multiples, "
-    "and suggested price ranges are generated strictly for informational and educational tracking purposes. They do not "
+    "and suggested price ranges are generated strictly for informational and educational tracking purposes[cite: 1]. They do not "
     "constitute financial advice, an investment recommendation, an endorsement, or a trade instruction to buy, sell, or "
     "hold any security[cite: 1]. Past performance and technical bands do not guarantee future results[cite: 1]. Always consult a licensed "
     "financial advisor or certified professional before making investment decisions[cite: 1]."
