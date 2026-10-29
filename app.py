@@ -84,3 +84,27 @@ WATCHLIST = {
         "pb": "1.4x",
         "pe": "11.2x",
         "sector": "Telecommunications",
+        "catalysts": "Capex tapering expanding free cash flows, enterprise data center leasing growth, and steady cash returns.",
+        "risks": "Broadband market competition and debt servicing requirements.",
+        "commentary": "Maintaining structural stability above its horizontal floor support with steady cash dividend yield."
+    },
+    "ALI": {
+        "name": "Ayala Land, Inc.",
+        "yf_sym": "ALI.PS",
+        "current_price": 15.20,
+        "support": 14.80,
+        "resistance": 17.50,
+        "rsi": 53.4,
+        "pb": "0.6x",
+        "pe": "8.9x",
+        "sector": "Real Estate",
+        "catalysts": "Commercial leasing recovery, stable residential presales volume, and provincial estate development.",
+        "risks": "Mortgage rate sensitivity and building material input costs.",
+        "commentary": "Trading at a steep discount to net asset value (NAV). Price action remains constructive above multi-month support."
+    },
+    "BDO": {
+        "name": "BDO Unibank, Inc.",
+        "yf_sym": "BDO.PS",
+        "current_price": 117.10,
+        "support": 110.00,
+        "resistance": 125.00,
